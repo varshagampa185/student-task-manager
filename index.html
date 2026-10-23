@@ -1,0 +1,293 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Task Manager</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #dbeafe, #ede9fe);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4f46e5;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 15px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .add-btn {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .add-btn:hover {
+            background: #3730a3;
+        }
+
+        #taskList {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        #taskList li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8fafc;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .task-text {
+            flex: 1;
+            overflow-wrap: anywhere;
+        }
+
+        .completed .task-text {
+            text-decoration: line-through;
+            color: #888;
+        }
+
+        .delete-btn {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .stats {
+            margin-top: 20px;
+            text-align: center;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #888;
+            margin-top: 25px;
+        }
+
+        @media (max-width: 400px) {
+            .container {
+                padding: 20px;
+            }
+
+            .input-area {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="container">
+        <h1>📚 Student Task Manager</h1>
+
+        <p class="subtitle">
+            Plan your day. Complete your goals.
+        </p>
+
+        <form class="input-area" id="taskForm">
+            <input
+                type="text"
+                id="taskInput"
+                placeholder="Enter your task..."
+                maxlength="150"
+                aria-label="Enter a new task"
+                required
+            >
+
+            <button type="submit" class="add-btn">
+                Add Task
+            </button>
+        </form>
+
+        <ul id="taskList"></ul>
+
+        <p id="emptyMessage" class="empty-message">
+            No tasks yet. Add your first task!
+        </p>
+
+        <p class="stats" id="taskStats">
+            Total: 0 | Pending: 0 | Completed: 0
+        </p>
+    </main>
+
+    <script>
+        const taskForm = document.getElementById("taskForm");
+        const taskInput = document.getElementById("taskInput");
+        const taskList = document.getElementById("taskList");
+        const taskStats = document.getElementById("taskStats");
+        const emptyMessage = document.getElementById("emptyMessage");
+
+        let tasks = [];
+
+        try {
+            const savedTasks = JSON.parse(
+                localStorage.getItem("studentTasks") || "[]"
+            );
+
+            if (Array.isArray(savedTasks)) {
+                tasks = savedTasks.filter(task =>
+                    task &&
+                    typeof task.text === "string" &&
+                    typeof task.completed === "boolean" &&
+                    typeof task.id === "number"
+                );
+            }
+        } catch (error) {
+            tasks = [];
+        }
+
+        function saveTasks() {
+            try {
+                localStorage.setItem(
+                    "studentTasks",
+                    JSON.stringify(tasks)
+                );
+            } catch (error) {
+                alert("Unable to save tasks in this browser.");
+            }
+        }
+
+        function renderTasks() {
+            taskList.replaceChildren();
+
+            tasks.forEach(task => {
+                const li = document.createElement("li");
+
+                if (task.completed) {
+                    li.classList.add("completed");
+                }
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = task.completed;
+                checkbox.setAttribute(
+                    "aria-label",
+                    "Mark task as completed"
+                );
+
+                checkbox.addEventListener("change", () => {
+                    task.completed = checkbox.checked;
+                    saveTasks();
+                    renderTasks();
+                });
+
+                const span = document.createElement("span");
+                span.className = "task-text";
+                span.textContent = task.text;
+
+                const deleteButton = document.createElement("button");
+                deleteButton.className = "delete-btn";
+                deleteButton.textContent = "Delete";
+                deleteButton.setAttribute(
+                    "aria-label",
+                    "Delete " + task.text
+                );
+
+                deleteButton.addEventListener("click", () => {
+                    tasks = tasks.filter(item => item.id !== task.id);
+                    saveTasks();
+                    renderTasks();
+                });
+
+                li.append(checkbox, span, deleteButton);
+                taskList.appendChild(li);
+            });
+
+            const completed = tasks.filter(
+                task => task.completed
+            ).length;
+
+            const pending = tasks.length - completed;
+
+            taskStats.textContent =
+                `Total: ${tasks.length} | ` +
+                `Pending: ${pending} | ` +
+                `Completed: ${completed}`;
+
+            emptyMessage.hidden = tasks.length > 0;
+        }
+
+        taskForm.addEventListener("submit", event => {
+            event.preventDefault();
+
+            const text = taskInput.value.trim();
+
+            if (!text) {
+                return;
+            }
+
+            tasks.push({
+                id: Date.now() + Math.random(),
+                text: text,
+                completed: false
+            });
+
+            saveTasks();
+            renderTasks();
+
+            taskInput.value = "";
+            taskInput.focus();
+        });
+
+        renderTasks();
+    </script>
+
+</body>
+</html>
+```
